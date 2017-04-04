@@ -105,6 +105,7 @@ CREATE TABLE public.localities
   region text,
   population integer,
   ar_name text,
+  de_name text,
   ur_name text,
   id_name text,
   CONSTRAINT localities_pkey PRIMARY KEY (geonameid,originalsource) 
@@ -146,6 +147,7 @@ CREATE TABLE public.tilemessages
   en_sentence text,
   ar_sentence text,
   ur_sentence text,
+  de_sentence text,
   id_sentence text,
   full_text text,
   link text,

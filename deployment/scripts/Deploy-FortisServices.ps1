@@ -256,7 +256,9 @@ if ($DeployHdi -eq $true) {
 		-ServicePrincipalSubscriptionId $ServicePrincipal.ServicePrincipalSubscriptionId `
 		-DeploySites $DeploySites `
 		-PyPath "..\..\fortis-aggregation-spark\jobs" `
-		-PyFile "bytileAggregator.py"
+		-PyFile "bytileAggregator.py" `
+		-ModelPath "..\..\fortis-aggregation-spark\models" `
+		-ModelFile "SWN3_ar_ur.json"
 }
 if ($DeploySites -eq $true) {
     Write-Host "Starting $KeywordsSAJobName stream analytics job"

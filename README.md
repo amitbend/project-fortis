@@ -8,11 +8,9 @@ Fortis implements a data gathering and intelligence pipeline that collects, anal
 * Windows 8.x or 10
 * Define your [deployment credentials for Azure App Services](https://docs.microsoft.com/en-us/azure/app-service-web/app-service-deployment-credentials)
 * Powershell Version 5. or higher - you can check the version by running `$PSVersionTable.PSVersion` - also ensure you allow the execution of remote signed scripts by running `Set-ExecutionPolicy RemoteSigned`
-* [Azure Powershell cmdlets](https://docs.microsoft.com/en-us/powershell/azureps-cmdlets-docs/) - if you have `PowerShellGet` installed, you can get them by running `Install-Module Azure` and `Install-Module AzureRM` - otherwise use the [Web Platform Installer](https://www.microsoft.com/web/downloads/platform.aspx) to install the cmdlets.
-* [Git](https://git-scm.com/download/win) - ensure the path is known to Powershell - it is recommended to enable the [credentials cache](https://help.github.com/articles/caching-your-github-password-in-git/) as well as to install [posh-git](https://github.com/dahlbyk/posh-git): 
+* [Azure Powershell cmdlets](https://docs.microsoft.com/en-us/powershell/azureps-cmdlets-docs/) by using [Web Platform Installer](https://www.microsoft.com/web/downloads/platform.aspx) to install the cmdlets.
+* [Git](https://git-scm.com/download/win) - ensure the path is known to Powershell - it is recommended to install the [Git Credential Manager for Windows](https://github.com/Microsoft/Git-Credential-Manager-for-Windows) as well as to install [posh-git](https://github.com/dahlbyk/posh-git): 
 ```
-git config --global credential.helper wincred
-
 PowerShellGet\Install-Module posh-git -Scope CurrentUser
 Update-Module posh-git 
 ```

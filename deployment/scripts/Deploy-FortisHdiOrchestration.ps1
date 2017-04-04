@@ -22,6 +22,8 @@ Param(
     [string] [Parameter(Mandatory=$true)] $ServicePrincipalSubscriptionId,
     [string] [Parameter(Mandatory=$true)] $PyPath,
     [string] [Parameter(Mandatory=$true)] $PyFile,
+	[string] [Parameter(Mandatory=$true)] $ModelPath,
+    [string] [Parameter(Mandatory=$true)] $ModelFile,
     [Boolean] [Parameter(Mandatory = $false)] $DeploySites = $true,
     [string[]] [Parameter(Mandatory=$false)] $PipDependencyPackages = @("nltk", "langid"),
     [string] [Parameter(Mandatory=$false)] $ZipCmd = "C:\Program Files\7-Zip\7z.exe"
@@ -116,6 +118,11 @@ if ($FortisHdiRg -ne $null) {
 
     &$azCopyPath $pyRootPath $httpsFolderUri $PyFile /DestKey:$clusterStorageAccountKey /Y
     &$azCopyPath $rootPath $httpsFolderUri $zipFile /DestKey:$clusterStorageAccountKey /Y
+
+	$modelRootPath = (Get-Item -Path $ModelPath -Verbose).FullName
+
+    $httpsModelsUri = "https://$DataStorageAccountName.blob.core.windows.net/models"
+    &$azCopyPath $modelRootPath $httpsModelsUri $ModelFile /DestKey:$DataStorageAccountKey /Y
 }
 else {
     Write-Host "Failed to create resource group"

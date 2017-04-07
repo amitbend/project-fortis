@@ -742,7 +742,7 @@ def build_aggs(timespan, top_5, kws, vals):
 
 def main(sc):
 
-    is_incremental = True
+    is_incremental = False
     is_file_data_source = False
     tile_path = getenv('TILE_INPUT_PATTERN')
     timeseries_path = getenv('TIMESERIES_INPUT_PATTERN')
@@ -847,47 +847,47 @@ def main(sc):
             # do not want to re-run all data for all time
             data_source.deleteAllBut(tile_prev_container, now)
             
-#        # read all messages
-#        messages_lines = data_source.load(sc, message_container, timeseries_path)
-#        all_messages = filter_to_valid(messages_lines, stats, "timeseries")
-#        all_messages.cache()
-#        
-#        # get distinct sources
-#        sources = all_messages.flatMap(get_sources).distinct().collect()
-#        for source in sources:
-#            # filter for single source
-#            source_filtered = all_messages.filter(matches_source(source))
-#            # get distinct timespaces
-#            timespans = source_filtered.flatMap(get_timespans).distinct().collect()
-#            recs_by_timespan = {}
-#            for timespan in timespans:
-#                # filter for single timespan
-#                filtered = source_filtered.filter(matches_timespan(timespan))
-#                filtered.cache()
-#                
-#                recs_by_timespan[timespan] = filtered.count()
-#                
-#                # flat map all keywords
-#                sectioned = filtered.flatMap(split_keywords)
-#                # count keywords
-#                by_key = sectioned.reduceByKey(lambda a,b: a + b)
-#                # take top 5 keyword counts
-#                top_5 = by_key.takeOrdered(5, key=lambda x: -x[1])
-#
-#                # flat my messages by hour
-#                filtered_by_hour = filtered.flatMap(by_hour)
-#
-#                # count message keywords by hour
-#                hourly_counts = filtered_by_hour.combineByKey(create_agg_all(merge_sentence_all), merge_sentence_all, merge_agg)
-#                # sort aggregated counts by hour
-#                ordered_counts = hourly_counts.sortByKey().groupBy(lambda x: timespan)
-#                # get distinct hour keys
-#                all_keys = hourly_counts.flatMap(lambda x: x[1].keys()).distinct().collect()
-#                # build hourly aggregation graph
-#                all_kw_groups = ordered_counts.flatMap(lambda x: build_aggs(x[0], top_5, all_keys, x[1]))
-#                # write data to blob storage
-#                all_kw_groups.foreach(lambda x: data_source.saveAsJson(x[1], timeseries_output_container, '%s/%s/%s.json' % (source, x[0][0], x[0][1])))
-#            stats.add_stat(source + '_records_by_timespan', recs_by_timespan)
+        # read all messages
+        messages_lines = data_source.load(sc, message_container, timeseries_path)
+        all_messages = filter_to_valid(messages_lines, stats, "timeseries")
+        all_messages.cache()
+        
+        # get distinct sources
+        sources = all_messages.flatMap(get_sources).distinct().collect()
+        for source in sources:
+            # filter for single source
+            source_filtered = all_messages.filter(matches_source(source))
+            # get distinct timespaces
+            timespans = source_filtered.flatMap(get_timespans).distinct().collect()
+            recs_by_timespan = {}
+            for timespan in timespans:
+                # filter for single timespan
+                filtered = source_filtered.filter(matches_timespan(timespan))
+                filtered.cache()
+                
+                recs_by_timespan[timespan] = filtered.count()
+                
+                # flat map all keywords
+                sectioned = filtered.flatMap(split_keywords)
+                # count keywords
+                by_key = sectioned.reduceByKey(lambda a,b: a + b)
+                # take top 5 keyword counts
+                top_5 = by_key.takeOrdered(5, key=lambda x: -x[1])
+
+                # flat my messages by hour
+                filtered_by_hour = filtered.flatMap(by_hour)
+
+                # count message keywords by hour
+                hourly_counts = filtered_by_hour.combineByKey(create_agg_all(merge_sentence_all), merge_sentence_all, merge_agg)
+                # sort aggregated counts by hour
+                ordered_counts = hourly_counts.sortByKey().groupBy(lambda x: timespan)
+                # get distinct hour keys
+                all_keys = hourly_counts.flatMap(lambda x: x[1].keys()).distinct().collect()
+                # build hourly aggregation graph
+                all_kw_groups = ordered_counts.flatMap(lambda x: build_aggs(x[0], top_5, all_keys, x[1]))
+                # write data to blob storage
+                all_kw_groups.foreach(lambda x: data_source.saveAsJson(x[1], timeseries_output_container, '%s/%s/%s.json' % (source, x[0][0], x[0][1])))
+            stats.add_stat(source + '_records_by_timespan', recs_by_timespan)
 
 if __name__ == '__main__':
     conf = SparkConf()

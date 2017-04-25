@@ -387,6 +387,7 @@ class SentimentScorer:
             # capture both positive and negative, choose one at scoring time
             pos_score, neg_score = word_data['pos'], word_data['neg']            
             terms = [word_data['word']]
+            # TODO: make the sentiment scorer configurable
             if 'word_ar' in word_data:
                 terms.append(word_data['word_ar'])
             if 'word_ur' in word_data:
@@ -475,24 +476,25 @@ def get_keywords():
     account_name = getenv('STORAGE_ACCOUNT')
     account_key = getenv('STORAGE_KEY')
     keyword_table = getenv('KEYWORD_TABLE_NAME')
+    site_name = getenv('SITE_NAME')
+
     table_service = TableService(account_name = account_name, account_key = account_key)
 
+    filter_str = "PartitionKey eq '%s'" % (site_name)
     # query all keyword entities
-    keywords = table_service.query_entities(keyword_table, filter="PartitionKey eq 'Keyword'")
+    keywords = table_service.query_entities(keyword_table, filter=filter_str)
 
+    # TODO: automate the language detection
     # separate each keyword by language
-    arKeywords = {}
-    enKeywords = {}
+    idKeywords = {}
     for keyword in keywords:
         # map each keyword by its canonical form (currently lowercase English)
-        canonicalKeyword = keyword.en_term.lower()
+        canonicalKeyword = keyword.name_id.lower()
         # pre-compile regex for each keyword
-        arKeywordRegex = create_keyword_regex(keyword.ar_term)
-        enKeywordRegex = create_keyword_regex(keyword.en_term)
-        arKeywords[canonicalKeyword] = arKeywordRegex
-        enKeywords[canonicalKeyword] = enKeywordRegex
-
-    return {'ar': arKeywords, 'en': enKeywords}
+        idKeywordRegex = create_keyword_regex(keyword.name_id)
+        idKeywords[canonicalKeyword] = idKeywordRegex
+        print 'add keyword %s %s' % (canonicalKeyword, idKeywordRegex)
+    return {'id': idKeywords}
 
 def get_keyword_filters():
     # get table service reference
@@ -562,11 +564,12 @@ def segment(sentence):
             try:
                 if 'coordinates' not in location:
                     continue
-                longitude = location['coordinates'][0]
-                latitude = location['coordinates'][1]
+                longitude = float(location['coordinates'][1])
+                latitude = float(location['coordinates'][0])
                 # aggregate over each zoom level
                 for zoom in range(15, 16):
                     try:
+                        print "1 coord: %f %f" % (latitude, longitude)
                         tileId = Tile.tile_id_from_lat_long(latitude, longitude, zoom)
                         keywords = sentence['Keywords']
                         keywordLength = len(keywords)
@@ -580,6 +583,7 @@ def segment(sentence):
                                 secondKeyword = keywords[j]
                                 yield ( ('keyword', source, firstKeyword, secondKeyword, timespanLabel, tileId ), payload )
                     except ValueError as err:
+                        print "VALUE ERROR: %s %s" % (sentence,  str(err))
                         yield ( ('ValueError', latitude, longitude, zoom), str(err) )
             except TypeError as err:
                 yield ( 'TypeError', (str(err), location))
@@ -744,6 +748,7 @@ def main(sc):
 
     is_incremental = False
     is_file_data_source = False
+     
     tile_path = getenv('TILE_INPUT_PATTERN')
     timeseries_path = getenv('TIMESERIES_INPUT_PATTERN')
 
@@ -770,7 +775,9 @@ def main(sc):
     with Stats(data_source, tile_output_container) as stats:  
         # get the list of keywords from Azure Table Storage
         keywords = get_keywords()
-        
+
+        print "keywords: %s" % (keywords,)
+
         # get noisy keyword filters
         keyword_filters = get_keyword_filters()
 
@@ -819,6 +826,7 @@ def main(sc):
             # remove 'keyword' discriminator from data
             normalized = output_data.map(normalize_keys)
             # save RDDs for new / updated data
+            
             data_source.saveAsText(normalized,  tile_output_container, nextrdd_path)
 
         else:
@@ -854,13 +862,18 @@ def main(sc):
         
         # get distinct sources
         sources = all_messages.flatMap(get_sources).distinct().collect()
+        print 'before source' 
+        print sources
         for source in sources:
+            print 'in source' 
             # filter for single source
             source_filtered = all_messages.filter(matches_source(source))
             # get distinct timespaces
             timespans = source_filtered.flatMap(get_timespans).distinct().collect()
             recs_by_timespan = {}
             for timespan in timespans:
+                
+                print 'in timemspan' 
                 # filter for single timespan
                 filtered = source_filtered.filter(matches_timespan(timespan))
                 filtered.cache()
@@ -907,5 +920,6 @@ if __name__ == '__main__':
     os.environ['FILTER_TABLE_NAME'] = str(sys.argv[11])
     os.environ['SENTIMENT_CONTAINER'] = str(sys.argv[12])
     os.environ['SENTIMENT_MODEL'] = str(sys.argv[13])
+    os.environ['SITE_NAME'] = str(sys.argv[14])
     main(sc)
 

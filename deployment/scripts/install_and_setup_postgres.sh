@@ -151,7 +151,7 @@ CREATE TABLE public.tilemessages
   id_sentence text,
   full_text text,
   link text,
-  original_sources text,
+  original_sources text[],
   title text,
   orig_language text NOT NULL,
   CONSTRAINT message_pk PRIMARY KEY (messageid, source)

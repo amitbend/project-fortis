@@ -486,15 +486,34 @@ def get_keywords():
 
     # TODO: automate the language detection
     # separate each keyword by language
+    deKeywords = {}
+    urKeywords = {}
+    arKeywords = {}
+    enKeywords = {}
     idKeywords = {}
     for keyword in keywords:
-        # map each keyword by its canonical form (currently lowercase English)
-        canonicalKeyword = keyword.name_id.lower()
-        # pre-compile regex for each keyword
-        idKeywordRegex = create_keyword_regex(keyword.name_id)
-        idKeywords[canonicalKeyword] = idKeywordRegex
-        print 'add keyword %s %s' % (canonicalKeyword, idKeywordRegex)
-    return {'id': idKeywords}
+        canonicalKeyword = keyword.name.encode('UTF-8').lower()
+        if hasattr(keyword, 'name_de'): 
+             # pre-compile regex for each keyword
+            deKeywordRegex = create_keyword_regex(keyword.name_de.encode('UTF-8'))
+            deKeywords[canonicalKeyword] = deKeywordRegex
+        if hasattr(keyword, 'name_ur'): 
+             # pre-compile regex for each keyword
+            urKeywordRegex = create_keyword_regex(keyword.name_ur.encode('UTF-8'))
+            urKeywords[canonicalKeyword] = urKeywordRegex
+        if hasattr(keyword, 'name_ar'): 
+            # pre-compile regex for each keyword
+            arKeywordRegex = create_keyword_regex(keyword.name_ar.encode('UTF-8'))
+            arKeywords[canonicalKeyword] = arKeywordRegex
+        if hasattr(keyword, 'name_id'): 
+             # pre-compile regex for each keyword
+            idKeywordRegex = create_keyword_regex(keyword.name_id.encode('UTF-8'))
+            idKeywords[canonicalKeyword] = idKeywordRegex
+        if hasattr(keyword, 'name_en'): 
+            # pre-compile regex for each keyword
+            enKeywordRegex = create_keyword_regex(keyword.name_en.encode('UTF-8'))
+            enKeywords[canonicalKeyword] = enKeywordRegex
+    return {'de': deKeywords, 'en': enKeywords, 'id': idKeywords, 'ur': urKeywords, 'ar': arKeywords }
 
 def get_keyword_filters():
     # get table service reference
@@ -508,12 +527,15 @@ def get_keyword_filters():
     return [ [ create_keyword_regex(term) for term in json.loads(row.filteredTerms) ] for row in rows ]
 
 def create_keyword_regex(keyword):
+    print 'create_keyword_regex'
     # import nltk
     ensure_package_path()
     from nltk.tokenize import wordpunct_tokenize as tokenize
+    print 'tokenize ==> %s' % (keyword)
     tokens = tokenize(keyword)
     pattern = '\\s+'.join(tokens)
     pattern = '\\b%s\\b' % pattern
+    print 'compile pattern ==> %s' % (pattern)
     return re.compile(pattern, re.I | re.UNICODE)
 
 def extract_keywords(sentence, keywords):
@@ -564,8 +586,8 @@ def segment(sentence):
             try:
                 if 'coordinates' not in location:
                     continue
-                longitude = float(location['coordinates'][1])
-                latitude = float(location['coordinates'][0])
+                longitude = float(location['coordinates'][0])
+                latitude = float(location['coordinates'][1])
                 # aggregate over each zoom level
                 for zoom in range(15, 16):
                     try:
@@ -748,8 +770,10 @@ def main(sc):
 
     is_incremental = False
     is_file_data_source = False
-     
-    tile_path = getenv('TILE_INPUT_PATTERN')
+
+    tile_path = '/*/*.json'
+    if is_incremental:
+        tile_path = getenv('TILE_INPUT_PATTERN')
     timeseries_path = getenv('TIMESERIES_INPUT_PATTERN')
 
     # create path
